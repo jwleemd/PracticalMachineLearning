@@ -25,7 +25,7 @@ na.exist <- apply(training, 2, function(x) any(is.na(x))) # no NA in a column?
 training <- training[,!na.exist]  # removes variables with NA
 ```
 
-To build a random forest model and test its performance, the original training set is split into two data sets using the createPartition command of the caret package. Random forest method is used for predictive modeling. 5-fold cross validation is run. 
+To build a random forest model and test its performance, the original training set is split into two data sets using the createPartition command of the caret package. Random forest method is used for predictive modeling. 10-fold cross validation is run. 
 
 ```{r}
 set.seed(12354)
@@ -34,26 +34,24 @@ training1 <- training[inTrain,]
 testing1 <- training[-inTrain,]
 ```
 
-
-
 ```{r, eval=FALSE}
 rfFit <- train(x=training1[,1:53], y=training1[,54], 
               method="rf",
-              trControl=trainControl(method = "cv", number=5),
+              trControl=trainControl(method = "cv", number=10),
               prox=TRUE,allowParallel=TRUE)
 ```
 
-This fitted model is applied to the testing1 subset I set aside from the training process. The prediction accuracy for this subset is 0.9973. Since it takes a long time to actually run the code for building the model, I load the previously saved model object into R session.
+The following is the summary of the final model built by random forests. The in-sample error is estimated to be 0.19%. 
 
 ```{r, echo=FALSE}
 load('rfFit.rdata')
 ```
 
-```{r, echo=FALSE}
+```{r}
 print(rfFit)
 print(rfFit$finalModel)
 ```
-This model is now tested on the testing1 dataset, a subset of the original training dataset. The accuracy of prediction is 99.78%.
+This model is now tested on the testing1 dataset, a subset of the original training dataset. The accuracy of prediction is 99.8%. The estimated out-of-sample error rate would be 0.2%.
 ```{r}
 predict_testing1 <- predict(rfFit, newdata=testing1)
 confusionMatrix(predict_testing1, testing1$classe)

@@ -81,16 +81,17 @@ require(randomForest, quietly=TRUE, warn.conflicts=FALSE)</code></pre>
 training &lt;- training[,-(1:6)]
 na.exist &lt;- apply(training, 2, function(x) any(is.na(x))) # no NA in a column?
 training &lt;- training[,!na.exist]  # removes variables with NA</code></pre>
-<p>To build a random forest model and test its performance, the original training set is split into two data sets using the createPartition command of the caret package. Random forest method is used for predictive modeling. 5-fold cross validation is run.</p>
+<p>To build a random forest model and test its performance, the original training set is split into two data sets using the createPartition command of the caret package. Random forest method is used for predictive modeling. 10-fold cross validation is run.</p>
 <pre class="r"><code>set.seed(12354)
 inTrain &lt;- createDataPartition(y=training$classe, p=0.7, list=FALSE)
 training1 &lt;- training[inTrain,]
 testing1 &lt;- training[-inTrain,]</code></pre>
 <pre class="r"><code>rfFit &lt;- train(x=training1[,1:53], y=training1[,54], 
               method=&quot;rf&quot;,
-              trControl=trainControl(method = &quot;cv&quot;, number=5),
+              trControl=trainControl(method = &quot;cv&quot;, number=10),
               prox=TRUE,allowParallel=TRUE)</code></pre>
-<p>This fitted model is applied to the testing1 subset I set aside from the training process. The prediction accuracy for this subset is 0.9973. Since it takes a long time to actually run the code for building the model, I load the previously saved model object into R session.</p>
+<p>The following is the summary of the final model built by random forests. The in-sample error is estimated to be 0.19%.</p>
+<pre class="r"><code>print(rfFit)</code></pre>
 <pre><code>## Random Forest 
 ## 
 ## 13737 samples
@@ -98,17 +99,18 @@ testing1 &lt;- training[-inTrain,]</code></pre>
 ##     5 classes: 'A', 'B', 'C', 'D', 'E' 
 ## 
 ## No pre-processing
-## Resampling: Cross-Validated (5 fold) 
-## Summary of sample sizes: 10989, 10990, 10990, 10988, 10991 
+## Resampling: Cross-Validated (10 fold) 
+## Summary of sample sizes: 12364, 12362, 12363, 12364, 12364, 12364, ... 
 ## Resampling results across tuning parameters:
 ## 
-##   mtry  Accuracy   Kappa      Accuracy SD   Kappa SD    
-##    2    0.9933026  0.9915275  0.0029194136  0.0036942553
-##   27    0.9972336  0.9965008  0.0007553361  0.0009554302
-##   53    0.9957780  0.9946593  0.0015778774  0.0019962046
+##   mtry  Accuracy   Kappa      Accuracy SD  Kappa SD   
+##    2    0.9944676  0.9930018  0.001722482  0.002179494
+##   27    0.9975249  0.9968693  0.001722633  0.002178871
+##   53    0.9963604  0.9953963  0.001680635  0.002125690
 ## 
 ## Accuracy was used to select the optimal model using  the largest value.
 ## The final value used for the model was mtry = 27.</code></pre>
+<pre class="r"><code>print(rfFit$finalModel)</code></pre>
 <pre><code>## 
 ## Call:
 ##  randomForest(x = x, y = y, mtry = param$mtry, proximity = TRUE,      allowParallel = TRUE) 
@@ -120,11 +122,11 @@ testing1 &lt;- training[-inTrain,]</code></pre>
 ## Confusion matrix:
 ##      A    B    C    D    E  class.error
 ## A 3905    1    0    0    0 0.0002560164
-## B    5 2649    4    0    0 0.0033860045
+## B    5 2648    4    1    0 0.0037622272
 ## C    0    3 2393    0    0 0.0012520868
-## D    0    0    7 2245    0 0.0031083481
-## E    0    0    0    6 2519 0.0023762376</code></pre>
-<p>This model is now tested on the testing1 dataset, a subset of the original training dataset. The accuracy of prediction is 99.78%.</p>
+## D    0    0    8 2244    0 0.0035523979
+## E    0    0    0    4 2521 0.0015841584</code></pre>
+<p>This model is now tested on the testing1 dataset, a subset of the original training dataset. The accuracy of prediction is 99.8%. The estimated out-of-sample error rate would be 0.2%.</p>
 <pre class="r"><code>predict_testing1 &lt;- predict(rfFit, newdata=testing1)
 confusionMatrix(predict_testing1, testing1$classe)</code></pre>
 <pre><code>## Confusion Matrix and Statistics
@@ -133,31 +135,31 @@ confusionMatrix(predict_testing1, testing1$classe)</code></pre>
 ## Prediction    A    B    C    D    E
 ##          A 1673    3    0    0    0
 ##          B    0 1136    2    0    0
-##          C    0    0 1023    1    0
-##          D    0    0    1  962    4
-##          E    1    0    0    1 1078
+##          C    0    0 1024    2    0
+##          D    0    0    0  961    3
+##          E    1    0    0    1 1079
 ## 
 ## Overall Statistics
 ##                                           
-##                Accuracy : 0.9978          
-##                  95% CI : (0.9962, 0.9988)
+##                Accuracy : 0.998           
+##                  95% CI : (0.9964, 0.9989)
 ##     No Information Rate : 0.2845          
 ##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
 ##                                           
-##                   Kappa : 0.9972          
+##                   Kappa : 0.9974          
 ##  Mcnemar's Test P-Value : NA              
 ## 
 ## Statistics by Class:
 ## 
 ##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity            0.9994   0.9974   0.9971   0.9979   0.9963
-## Specificity            0.9993   0.9996   0.9998   0.9990   0.9996
-## Pos Pred Value         0.9982   0.9982   0.9990   0.9948   0.9981
-## Neg Pred Value         0.9998   0.9994   0.9994   0.9996   0.9992
+## Sensitivity            0.9994   0.9974   0.9981   0.9969   0.9972
+## Specificity            0.9993   0.9996   0.9996   0.9994   0.9996
+## Pos Pred Value         0.9982   0.9982   0.9981   0.9969   0.9981
+## Neg Pred Value         0.9998   0.9994   0.9996   0.9994   0.9994
 ## Prevalence             0.2845   0.1935   0.1743   0.1638   0.1839
-## Detection Rate         0.2843   0.1930   0.1738   0.1635   0.1832
-## Detection Prevalence   0.2848   0.1934   0.1740   0.1643   0.1835
-## Balanced Accuracy      0.9993   0.9985   0.9984   0.9985   0.9979</code></pre>
+## Detection Rate         0.2843   0.1930   0.1740   0.1633   0.1833
+## Detection Prevalence   0.2848   0.1934   0.1743   0.1638   0.1837
+## Balanced Accuracy      0.9993   0.9985   0.9988   0.9981   0.9984</code></pre>
 <p>Finally, the test data set is loaded and the motion class is predicted using the random forest predictor trained in the previous section. The test data set is first formatted in the same way as the train data set.</p>
 <pre class="r"><code>testing2 &lt;- read.csv('pml-testing.csv',na.strings=c(&quot;NA&quot;,&quot;&quot;))
 testing2 &lt;- testing2[,-(1:6)]
