@@ -1,0 +1,71 @@
+---
+title: "Predictive modeling of motion data obtained from wearable devices"
+author: "Jae Wook Lee"
+date: "December 25, 2015"
+output: html_document
+---
+In this project, I built a prediction model for motion data obtained from wearable devices. This model predicts the manner in which each individual performed his or her dumbbell exercise from the motion data recorded by wearable devices. The prediction model was trained using a random forests algorithm, achieving 99.78% of accuracy in the test subset.  
+
+First, the packages required for random forest algorithm are loaded onto the memory.
+```{r}
+require(caret, quietly=TRUE)
+require(randomForest, quietly=TRUE, warn.conflicts=FALSE)
+```
+The training dataset is read from the comma-separated file downloaded from the Coursera website. Empty strings or NAs are read as NA strings.
+```{r}
+training <- read.csv("pml-training.csv", na.strings = c("NA",""))
+```
+
+Next, variables with a lot of NAs and variables containing unnecessary information are removed.
+
+```{r}
+### removing unnecessary variables and variables with NAs 
+training <- training[,-(1:6)]
+na.exist <- apply(training, 2, function(x) any(is.na(x))) # no NA in a column?
+training <- training[,!na.exist]  # removes variables with NA
+```
+
+To build a random forest model and test its performance, the original training set is split into two data sets using the createPartition command of the caret package. Random forest method is used for predictive modeling. 5-fold cross validation is run. 
+
+```{r}
+set.seed(12354)
+inTrain <- createDataPartition(y=training$classe, p=0.7, list=FALSE)
+training1 <- training[inTrain,]
+testing1 <- training[-inTrain,]
+```
+
+
+
+```{r, eval=FALSE}
+rfFit <- train(x=training1[,1:53], y=training1[,54], 
+              method="rf",
+              trControl=trainControl(method = "cv", number=5),
+              prox=TRUE,allowParallel=TRUE)
+```
+
+This fitted model is applied to the testing1 subset I set aside from the training process. The prediction accuracy for this subset is 0.9973. Since it takes a long time to actually run the code for building the model, I load the previously saved model object into R session.
+
+```{r, echo=FALSE}
+load('rfFit.rdata')
+```
+
+```{r, echo=FALSE}
+print(rfFit)
+print(rfFit$finalModel)
+```
+This model is now tested on the testing1 dataset, a subset of the original training dataset. The accuracy of prediction is 99.78%.
+```{r}
+predict_testing1 <- predict(rfFit, newdata=testing1)
+confusionMatrix(predict_testing1, testing1$classe)
+```
+
+Finally, the test data set is loaded and the motion class is predicted using the random forest predictor trained in the previous section. The test data set is first formatted in the same way as the train data set. 
+
+```{r}
+testing2 <- read.csv('pml-testing.csv',na.strings=c("NA",""))
+testing2 <- testing2[,-(1:6)]
+na.exist <- apply(testing2, 2, function(x) any(is.na(x))) # no NA in a column?
+testing2 <- testing2[,!na.exist]  # removes variables with NA
+prediction2 <- predict(rfFit, testing2)
+prediction2
+```
